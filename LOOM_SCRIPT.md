@@ -12,8 +12,8 @@ Talk through this outline — it hits everything the assignment asks for.
 - Point at the response: `route.distance_miles`, then scroll to `fuel_stops` —
   "each stop shows the station name, price per gallon, how many gallons to buy
   there, and the cost."
-- Point at `summary`: "3 stops, $X total — that's distance ÷ 10 MPG at the
-  blended cheapest price."
+- Point at `summary`: "6 stops, $274.95 total — that's 966.7 miles ÷ 10 MPG
+  at the blended cheapest price."
 - Run **"Plan a trip (POST, JSON body)"** (New York → Miami): "same endpoint
   accepts a JSON body too."
 - Run **"Validation error"** once: "missing params give a clean 400."
@@ -30,7 +30,7 @@ Talk through this outline — it hits everything the assignment asks for.
   - `geocode.py` — free Nominatim geocoding, USA-only, cached.
   - `routing.py` — free OSRM routing; **exactly one call per unique route**,
     cached 24 h.
-  - `stations.py` — the 6,738 truck stops are geocoded **offline at build
+  - `stations.py` — the 6,625 US truck stops are geocoded **offline at build
     time** (`scripts/build_stations.py`), grid-indexed, matched within
     10 miles of the route in under a second — zero network at request time.
   - `optimizer.py` — classic min-cost refuelling greedy: at each stop buy

@@ -8,9 +8,11 @@ route with zero external calls at request time:
 2. Resolve each stop's (City, State) to coordinates using the US Census
    Bureau's 2024 place gazetteer (public domain, downloaded once):
    https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_place_national.zip
-3. For cities missing from the gazetteer (small unincorporated places, plus
-   the few Canadian stops in the file), fall back to one Nominatim geocode
-   per city, cached in --cache so re-runs are free.
+3. For US cities missing from the gazetteer (small unincorporated places),
+   fall back to one Nominatim geocode per city, cached in --cache so re-runs
+   are free. Stops outside the USA (the CSV contains a few dozen Canadian
+   truck stops) are excluded: the API targets USA trips, and geocoding them
+   against US-biased sources produces bogus coordinates.
 
 Usage:
     python scripts/build_stations.py \\
@@ -30,6 +32,13 @@ from pathlib import Path
 
 SUFFIXES = {"CITY", "TOWN", "VILLAGE", "BOROUGH", "CDP", "MUNICIPALITY",
             "TOWNSHIP", "CHARTER TOWNSHIP"}
+
+# The API targets USA trips: only these state codes are kept.
+US_STATES = frozenset(
+    "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN "
+    "MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA "
+    "WV WI WY PR GU VI AS MP".split()
+)
 
 
 def norm(name):
@@ -56,7 +65,7 @@ def nominatim_city(city, state):
     q = f"{city}, {state}, USA"
     url = ("https://nominatim.openstreetmap.org/search?"
            + urllib.parse.urlencode({"q": q, "format": "json", "limit": 1,
-                                     "countrycodes": "us,ca"}))
+                                     "countrycodes": "us"}))
     req = urllib.request.Request(
         url, headers={"User-Agent": "SpotterFuelRouteAssessment/1.0 (data build)"})
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -102,8 +111,11 @@ def main():
     except FileNotFoundError:
         cache = {}
 
-    matched = unmatcheable = 0
+    matched = unmatcheable = excluded_non_us = 0
     for s in stations.values():
+        if s["state"] not in US_STATES:
+            excluded_non_us += 1
+            continue
         key = (norm(s["city"]), s["state"])
         if key in gaz:
             s["lat"], s["lng"] = gaz[key]
@@ -125,9 +137,10 @@ def main():
         else:
             unmatcheable += 1
 
-    final = [s for s in stations.values() if "lat" in s]
+    final = [s for s in stations.values()
+             if "lat" in s and s["state"] in US_STATES]
     print(f"stations with coordinates: {len(final)} "
-          f"(unresolvable: {unmatcheable})")
+          f"(unresolvable: {unmatcheable}, non-US excluded: {excluded_non_us})")
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump(final, open(out, "w"))

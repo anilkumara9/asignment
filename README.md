@@ -39,27 +39,40 @@ python manage.py test fuelrouter
 
 Optional overrides: `mpg` (default 10), `max_range_miles` (default 500).
 
-Response (200):
+Response (200) — real output for `start=Dallas,TX&finish=Chicago,IL`:
 
 ```json
 {
-  "start":   {"query": "Dallas,TX", "display_name": "Dallas, Dallas County, Texas, USA", "lat": 32.78, "lng": -96.80},
-  "finish":  {"query": "Chicago,IL", "display_name": "Chicago, Cook County, Illinois, USA", "lat": 41.88, "lng": -87.63},
-  "route":   {"distance_miles": 925.3, "duration_minutes": 830.5, "geometry": [[-96.8, 32.78], "..."]},
+  "start":  {"query": "Dallas, TX", "display_name": "Dallas, Dallas County, Texas, United States", "lat": 32.776, "lng": -96.797},
+  "finish": {"query": "Chicago, IL", "display_name": "Chicago, South Chicago Township, Cook County, Illinois, United States", "lat": 41.876, "lng": -87.624},
+  "route":   {"distance_miles": 966.7, "duration_minutes": 1026.4, "geometry": [[-96.797, 32.776], "..."]},
   "vehicle": {"mpg": 10, "max_range_miles": 500, "tank_gallons": 50.0},
   "fuel_stops": [
-    {
-      "station_id": "1243", "name": "PILOT TRAVEL CENTER #1243",
-      "address": "I-8, EXIT 119 & SR-85", "city": "Gila Bend", "state": "AZ",
-      "price_per_gallon_usd": 3.899, "lat": 32.95, "lng": -112.71,
-      "route_mile": 412.6, "miles_off_route": 2.3,
-      "gallons": 42.5, "cost_usd": 165.71
-    }
+    {"station_id": "72773", "name": "RaceTrac #2626", "city": "Dallas", "state": "TX",
+     "price_per_gallon_usd": 2.864, "route_mile": 2.9, "miles_off_route": 0.3,
+     "gallons": 1.381, "cost_usd": 3.96},
+    {"station_id": "3970", "name": "EXXON - Pilot #1293", "city": "Garland", "state": "TX",
+     "price_per_gallon_usd": 2.842, "route_mile": 13.8, "miles_off_route": 5.2,
+     "gallons": 2.83, "cost_usd": 8.04},
+    {"station_id": "68213", "name": "CADOO MILLS", "city": "Caddo Mills", "state": "TX",
+     "price_per_gallon_usd": 2.801, "route_mile": 42.1, "miles_off_route": 3.5,
+     "gallons": 50.0, "cost_usd": 140.03},
+    {"station_id": "68256", "name": "EXTRA MILE TRUCK STOP", "city": "Hooks", "state": "TX",
+     "price_per_gallon_usd": 2.817, "route_mile": 163.1, "miles_off_route": 0.3,
+     "gallons": 12.099, "cost_usd": 34.09},
+    {"station_id": "72594", "name": "Quiktrip #7900", "city": "Texarkana", "state": "TX",
+     "price_per_gallon_usd": 2.857, "route_mile": 175.0, "miles_off_route": 0.5,
+     "gallons": 1.194, "cost_usd": 3.41},
+    {"station_id": "69861", "name": "HUCKS FOOD & FUEL #379", "city": "Marion", "state": "IL",
+     "price_per_gallon_usd": 2.929, "route_mile": 649.5, "miles_off_route": 1.0,
+     "gallons": 29.165, "cost_usd": 85.42}
   ],
-  "summary": {"num_stops": 3, "total_gallons": 92.5, "total_cost_usd": 301.44,
-              "avg_price_per_gallon_usd": 3.259},
+  "summary": {"num_stops": 6, "total_gallons": 96.669, "total_cost_usd": 274.95,
+              "avg_price_per_gallon_usd": 2.844},
   "map_url": "http://127.0.0.1:8000/map/?start=Dallas,TX&finish=Chicago,IL",
-  "notes": ["...assumptions..."]
+  "notes": ["Fuel prices are retail USD/gallon from the provided OPIS truck-stop data.",
+            "The vehicle starts with an empty tank; fuel burned before the first stop is billed at that stop's price.",
+            "Stations are matched within 10 miles of the driving route."]
 }
 ```
 
@@ -91,7 +104,7 @@ additional external API calls.
 **Pipeline** (`fuelrouter/services/`):
 1. `geocode.py` — place name → (lat, lng), USA-only, cached.
 2. `routing.py` — coordinates → distance/duration/geometry via OSRM, cached.
-3. `stations.py` — loads the 6,738 truck stops from the bundled
+3. `stations.py` — loads the truck stops from the bundled
    `fuelrouter/data/stations.json`, indexes them on a lat/lng grid, and keeps
    those within 10 miles of the route, recording each stop's distance along
    the route (`route_mile`). Pure Python, ~0.5 s for a cross-country route.
@@ -104,7 +117,9 @@ additional external API calls.
 **Station coordinates** were built once with `scripts/build_stations.py`:
 each stop's city was resolved via the US Census Bureau's 2024 place gazetteer
 (public domain), with a cached Nominatim fallback for the few hundred cities
-missing from it. 6,738 of 6,738 stops resolved.
+missing from it. Of the 6,738 unique stops in the CSV, **6,625 US stops** are
+bundled (82 Canadian stops excluded — out of scope for USA trips; 31 US stops
+could not be resolved to coordinates).
 
 **Assumptions** (also returned in every response's `notes`):
 - Prices are retail USD/gallon from the provided OPIS data (cheapest price kept
