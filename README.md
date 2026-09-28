@@ -157,6 +157,23 @@ capture radius, but not a precise detour measurement.
 - A station counts as "along the route" if within 10 miles of it
   (`STATION_CAPTURE_MILES` in settings).
 
+## Architecture
+
+![System architecture](docs/architecture.png)
+
+- **HTTP interface** (`config/urls.py`, `fuelrouter/views.py`) — URL dispatch
+  routes to the Route API (JSON) or the Map page view (interactive Leaflet map
+  / error page).
+- **Trip planning** (`fuelrouter/services/planner.py`) — orchestrates the
+  pipeline: place geocoding (Nominatim, USA-only), driving route (OSRM), and
+  the minimum-cost fuel optimizer.
+- **Station data and geometry** (`stations.py`, `geo.py`, `stations.json`) —
+  offline matching of truck stops within 10 miles of the route; coordinates
+  resolved once at build time, so matching never touches the network.
+- **External integrations** — Nominatim, OSRM, and OSM map tiles (all free,
+  keyless). Django's cache keeps external calls to 1 per unique place name /
+  route pair per 24 h.
+
 ## Project layout
 
 ```
