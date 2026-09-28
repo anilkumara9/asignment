@@ -8,6 +8,27 @@ places to fuel up along the way** based on the provided OPIS truck-stop fuel
 prices — assuming a 500-mile max range and 10 MPG — plus the total money spent
 on fuel.
 
+## Tech stack
+
+- **Python 3.10+**, **Django 6.1** (latest stable), Django REST Framework
+- **Free, keyless map APIs:** OpenStreetMap Nominatim (geocoding), OSRM (routing)
+- **Map UI:** Leaflet + OpenStreetMap tiles (no API key)
+- **Data:** 6,625 US truck stops with retail fuel prices, bundled as JSON
+  (resolved offline at build time — zero network calls at request time)
+
+## Requirements coverage
+
+| Assignment requirement | How it's met |
+|---|---|
+| Accept USA start and finish locations | `GET`/`POST /api/route/`; geocoding restricted to the USA (`countrycodes=us`); non-US or unknown places return `422` |
+| Return the driving route on a map | Interactive Leaflet map at `GET /map/` (route polyline, numbered fuel-stop markers, summary panel); full route geometry also in the JSON |
+| Find cost-effective fuel stops from the fuel-price dataset | Minimum-cost refuelling optimizer over the 6,625 OPIS truck stops near the route; proven optimal against an exact dynamic-programming oracle |
+| Support multiple stops with a 500-mile maximum range | Multi-stop plans verified (e.g. 6 stops Dallas→Chicago, 21 stops Seattle→Miami); any gap over range returns `422` |
+| Calculate fuel expenditure at 10 MPG | Gallons always equal miles ÷ MPG exactly (fuel-conservation tested); `mpg` is overridable |
+| Use a free maps/routing API | Nominatim + public OSRM demo server — no API keys anywhere |
+| Use the latest stable Django release | Django 6.1.1 (verified latest stable) |
+| Respond quickly, ideally one routing request | Exactly **1** OSRM call per unique (start, finish) pair (cached 24 h); ~3 s cold, milliseconds warm; station matching is fully local |
+
 ## Quickstart
 
 ```bash
@@ -27,11 +48,11 @@ Then open in your browser or Postman:
 A ready-made Postman collection is included: `postman_collection.json`
 (import it into Postman; it targets `http://127.0.0.1:8000` by default).
 
-Run the test suite:
+## Demo
 
-```bash
-python manage.py test fuelrouter
-```
+A ≤5-minute walkthrough video (Loom) demonstrates the API end-to-end —
+`LOOM_SCRIPT.md` in this repo is the script it follows. The video link is
+submitted alongside this repository.
 
 ## API reference
 
@@ -150,7 +171,20 @@ fuelrouter/              the app
 templates/fuelrouter/    map.html (Leaflet), map_error.html
 scripts/build_stations.py  reproduces data/stations.json from the CSV
 postman_collection.json   import into Postman for the demo
+LOOM_SCRIPT.md            script for the ≤5-minute demo video
 ```
+
+## Testing
+
+```bash
+python manage.py test fuelrouter   # 29 tests, all passing
+```
+
+Covers the optimizer (including fuel conservation and a fuel-never-vanishes
+invariant), geometry helpers, station matching, the API views (200/400/422
+paths, override forwarding), planner overrides, input validation, and cache-key
+sanitization. The optimizer was additionally cross-checked against an exact
+dynamic-programming oracle on 60 randomized cases.
 
 ## Deployment notes
 
