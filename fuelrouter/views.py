@@ -1,5 +1,7 @@
 """HTTP layer: JSON API + interactive map page."""
 
+import math
+
 from django.shortcuts import render
 from django.views import View
 from rest_framework import status
@@ -8,9 +10,19 @@ from rest_framework.views import APIView
 
 from .services.planner import PlanningError, plan_trip
 
+# Sanity bounds for the optional numeric overrides (defense against typos
+# like mpg=0.1 or max_range_miles=1e12, which would otherwise produce absurd
+# but "valid" plans).
+_MPG_MIN, _MPG_MAX = 1, 1000
+_RANGE_MIN, _RANGE_MAX = 1, 100_000
+
 
 def _parse_params(request):
-    """Accept params from query string (GET) or JSON body (POST)."""
+    """Accept params from query string (GET) or JSON body (POST).
+
+    Returns (start, finish, mpg, max_range_miles, errors); ``errors`` lists
+    human-readable problems with the optional numeric overrides.
+    """
     if request.method == "POST":
         data = request.data if isinstance(request.data, dict) else {}
     else:
@@ -18,13 +30,28 @@ def _parse_params(request):
     start = (data.get("start") or "").strip()
     finish = (data.get("finish") or "").strip()
 
-    def _float(key):
-        try:
-            return float(data.get(key)) if data.get(key) is not None else None
-        except (TypeError, ValueError):
-            return None
+    errors = []
 
-    return start, finish, _float("mpg"), _float("max_range_miles")
+    def _float(key, lo, hi, unit):
+        raw = data.get(key)
+        if raw is None or (isinstance(raw, str) and not raw.strip()):
+            return None
+        try:
+            val = float(raw)
+        except (TypeError, ValueError):
+            errors.append(
+                f"'{key}' must be a number (e.g. ?{key}=10), got {raw!r}.")
+            return None
+        if not math.isfinite(val) or not lo <= val <= hi:
+            errors.append(
+                f"'{key}' must be between {lo:g} and {hi:g} {unit}, "
+                f"got {raw!r}.")
+            return None
+        return val
+
+    mpg = _float("mpg", _MPG_MIN, _MPG_MAX, "miles per gallon")
+    max_range = _float("max_range_miles", _RANGE_MIN, _RANGE_MAX, "miles")
+    return start, finish, mpg, max_range, errors
 
 
 class RoutePlanView(APIView):
@@ -33,13 +60,16 @@ class RoutePlanView(APIView):
     """
 
     def _handle(self, request):
-        start, finish, mpg, max_range = _parse_params(request)
+        start, finish, mpg, max_range, errors = _parse_params(request)
         if not start or not finish:
             return Response(
                 {"error": "Both 'start' and 'finish' locations are required, "
                           "e.g. ?start=Dallas,TX&finish=Chicago,IL."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if errors:
+            return Response({"error": " ".join(errors)},
+                            status=status.HTTP_400_BAD_REQUEST)
         try:
             plan = plan_trip(start, finish, mpg=mpg, max_range_miles=max_range)
         except PlanningError as exc:

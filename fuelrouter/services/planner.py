@@ -25,7 +25,7 @@ class PlanningError(Exception):
 def plan_trip(start_query, finish_query, mpg=None, max_range_miles=None):
     """Plan the cheapest-fuelled trip; returns a JSON-serializable dict."""
     mpg = settings.MPG if mpg is None else mpg
-    max_range = settings.MAX_RANGE_MILES if max_range_miles is None else max_range
+    max_range = settings.MAX_RANGE_MILES if max_range_miles is None else max_range_miles
 
     cache_key = (
         f"plan:v1:{start_query.strip().lower()}|{finish_query.strip().lower()}|"

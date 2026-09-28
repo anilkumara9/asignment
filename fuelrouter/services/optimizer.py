@@ -11,8 +11,14 @@ Classic greedy solution to the "min-cost to travel with gas stations" problem:
 * The destination is modelled as a station with price $0 so the plan never
   buys fuel it will not burn.
 
-This is optimal under the stated assumptions (constant MPG, stations already
-filtered to those near the route).
+This greedy is optimal for the subproblem starting at the first stop
+(exact dynamic-programming oracle agrees on randomized cases): from any stop,
+buying just enough to reach the next cheaper station within range — or filling
+up when none is cheaper in range — minimizes the remaining trip cost. The one
+heuristic choice is the first stop itself: the nearest station within range
+of the origin. That keeps the empty-tank assumption physical (a few miles on
+fumes rather than hundreds) at the cost of a small, bounded deviation from
+the absolute minimum in steep price-gradient scenarios.
 """
 
 from django.conf import settings

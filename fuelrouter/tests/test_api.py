@@ -51,6 +51,48 @@ class RoutePlanViewTests(SimpleTestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("error", json.loads(resp.content))
 
+    def test_non_numeric_mpg_returns_400(self):
+        resp = self.client.get(
+            "/api/route/?start=Dallas,TX&finish=Chicago,IL&mpg=lots")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("mpg", json.loads(resp.content)["error"])
+
+    def test_non_positive_mpg_returns_400(self):
+        for bad in ("0", "-10"):
+            resp = self.client.get(
+                f"/api/route/?start=Dallas,TX&finish=Chicago,IL&mpg={bad}")
+            self.assertEqual(resp.status_code, 400, bad)
+
+    def test_bad_max_range_returns_400(self):
+        for bad in ("abc", "0", "-500", "1e12"):
+            resp = self.client.get(
+                "/api/route/?start=Dallas,TX&finish=Chicago,IL"
+                f"&max_range_miles={bad}")
+            self.assertEqual(resp.status_code, 400, bad)
+
+    @patch.object(views_mod, "plan_trip", return_value=dict(CANNED_PLAN))
+    def test_valid_overrides_forwarded_to_planner(self, mock_plan):
+        resp = self.client.get(
+            "/api/route/?start=Dallas,TX&finish=Chicago,IL"
+            "&mpg=20&max_range_miles=400")
+        self.assertEqual(resp.status_code, 200)
+        _, kwargs = mock_plan.call_args
+        self.assertEqual(kwargs["mpg"], 20.0)
+        self.assertEqual(kwargs["max_range_miles"], 400.0)
+
+    @patch.object(views_mod, "plan_trip", return_value=dict(CANNED_PLAN))
+    def test_post_overrides_in_json_body(self, mock_plan):
+        resp = self.client.post(
+            "/api/route/",
+            data=json.dumps({"start": "Dallas,TX", "finish": "Chicago,IL",
+                             "mpg": 25}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        _, kwargs = mock_plan.call_args
+        self.assertEqual(kwargs["mpg"], 25.0)
+        self.assertIsNone(kwargs["max_range_miles"])
+
     @patch.object(views_mod, "plan_trip",
                   side_effect=PlanningError("Could not find 'X' inside the USA."))
     def test_planning_error_returns_422(self, mock_plan):

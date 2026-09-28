@@ -40,7 +40,7 @@ Talk through this outline — it hits everything the assignment asks for.
 ## 4:00–4:45 — Speed + tests
 - Re-run the Dallas → Chicago request: "first call took ~2 s for geocoding +
   routing; this one is instant — everything's cached."
-- Terminal: `python manage.py test fuelrouter` → "19 tests pass."
+- Terminal: `python manage.py test fuelrouter` → "28 tests pass."
 
 ## 4:45–5:00 — Close
 - "Repo's on GitHub at <link>; README covers setup, the algorithm, and the

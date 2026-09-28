@@ -38,6 +38,7 @@ python manage.py test fuelrouter
 ### `GET /api/route/?start=<place>&finish=<place>` (also accepts POST with a JSON body)
 
 Optional overrides: `mpg` (default 10), `max_range_miles` (default 500).
+Both must be positive numbers within sane bounds or the API returns 400.
 
 Response (200) — real output for `start=Dallas,TX&finish=Chicago,IL`:
 
@@ -95,7 +96,8 @@ additional external API calls.
   geometry).
 
 **Keeping external calls minimal (a requirement):**
-- Geocoding results are cached 24 h → 1 call per unique place name, ever.
+- Geocoding results are cached 24 h → 1 call per unique place name per cache
+  lifetime (use a persistent cache like Redis in production for "ever").
 - Routing results are cached 24 h → exactly 1 OSRM call per unique
   (start, finish) pair; repeat requests (including the map page) hit the cache.
 - Station coordinates are resolved **offline at build time** (see below), so
@@ -111,7 +113,9 @@ additional external API calls.
 4. `optimizer.py` — the classic minimum-cost refuelling greedy: at each stop,
    buy just enough to reach the next *cheaper* station within range, otherwise
    fill the tank (never buying more than needed to reach the destination, which
-   is modelled as a $0 station). Optimal under the stated assumptions.
+   is modelled as a $0 station). Optimal from the first stop onward; the first
+   stop itself is the nearest station within range of the origin (see the
+   optimizer docstring for the exact optimality claim).
 5. `planner.py` — orchestrates the above and shapes the JSON response.
 
 **Station coordinates** were built once with `scripts/build_stations.py`:
@@ -119,7 +123,10 @@ each stop's city was resolved via the US Census Bureau's 2024 place gazetteer
 (public domain), with a cached Nominatim fallback for the few hundred cities
 missing from it. Of the 6,738 unique stops in the CSV, **6,625 US stops** are
 bundled (82 Canadian stops excluded — out of scope for USA trips; 31 US stops
-could not be resolved to coordinates).
+could not be resolved to coordinates). Coordinates are **city centroids**
+from the gazetteer, not exact truck-stop addresses, so `miles_off_route` is
+approximate (typically within a few miles) — good enough for the 10-mile
+capture radius, but not a precise detour measurement.
 
 **Assumptions** (also returned in every response's `notes`):
 - Prices are retail USD/gallon from the provided OPIS data (cheapest price kept
@@ -137,7 +144,8 @@ fuelrouter/              the app
   services/              geocode.py, routing.py, stations.py, optimizer.py,
                          planner.py, geo.py   (framework-free, unit-tested)
   data/stations.json     truck stops with coordinates + prices (built offline)
-  tests/                 19 unit tests (optimizer, geometry, matching, API)
+  tests/                 28 unit tests (optimizer, geometry, matching, API,
+                         planner overrides, input validation)
   views.py               DRF JSON API + map page
 templates/fuelrouter/    map.html (Leaflet), map_error.html
 scripts/build_stations.py  reproduces data/stations.json from the CSV
