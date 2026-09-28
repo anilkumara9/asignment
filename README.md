@@ -11,7 +11,7 @@ on fuel.
 ## Quickstart
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate   # Python 3.10+
 pip install -r requirements.txt
 python manage.py runserver
 ```
@@ -44,28 +44,28 @@ Response (200) — real output for `start=Dallas,TX&finish=Chicago,IL`:
 
 ```json
 {
-  "start":  {"query": "Dallas, TX", "display_name": "Dallas, Dallas County, Texas, United States", "lat": 32.776, "lng": -96.797},
-  "finish": {"query": "Chicago, IL", "display_name": "Chicago, South Chicago Township, Cook County, Illinois, United States", "lat": 41.876, "lng": -87.624},
+  "start":  {"query": "Dallas,TX", "display_name": "Dallas, Dallas County, Texas, United States", "lat": 32.776, "lng": -96.797},
+  "finish": {"query": "Chicago,IL", "display_name": "Chicago, South Chicago Township, Cook County, Illinois, United States", "lat": 41.876, "lng": -87.624},
   "route":   {"distance_miles": 966.7, "duration_minutes": 1026.4, "geometry": [[-96.797, 32.776], "..."]},
   "vehicle": {"mpg": 10, "max_range_miles": 500, "tank_gallons": 50.0},
   "fuel_stops": [
     {"station_id": "72773", "name": "RaceTrac #2626", "city": "Dallas", "state": "TX",
-     "price_per_gallon_usd": 2.864, "route_mile": 2.9, "miles_off_route": 0.3,
+     "price_per_gallon_usd": 2.864, "route_mile": 2.86, "miles_off_route": 0.34,
      "gallons": 1.381, "cost_usd": 3.96},
     {"station_id": "3970", "name": "EXXON - Pilot #1293", "city": "Garland", "state": "TX",
-     "price_per_gallon_usd": 2.842, "route_mile": 13.8, "miles_off_route": 5.2,
+     "price_per_gallon_usd": 2.842, "route_mile": 13.81, "miles_off_route": 5.23,
      "gallons": 2.83, "cost_usd": 8.04},
     {"station_id": "68213", "name": "CADOO MILLS", "city": "Caddo Mills", "state": "TX",
-     "price_per_gallon_usd": 2.801, "route_mile": 42.1, "miles_off_route": 3.5,
+     "price_per_gallon_usd": 2.801, "route_mile": 42.11, "miles_off_route": 3.49,
      "gallons": 50.0, "cost_usd": 140.03},
     {"station_id": "68256", "name": "EXTRA MILE TRUCK STOP", "city": "Hooks", "state": "TX",
-     "price_per_gallon_usd": 2.817, "route_mile": 163.1, "miles_off_route": 0.3,
+     "price_per_gallon_usd": 2.817, "route_mile": 163.1, "miles_off_route": 0.31,
      "gallons": 12.099, "cost_usd": 34.09},
     {"station_id": "72594", "name": "Quiktrip #7900", "city": "Texarkana", "state": "TX",
-     "price_per_gallon_usd": 2.857, "route_mile": 175.0, "miles_off_route": 0.5,
+     "price_per_gallon_usd": 2.857, "route_mile": 175.04, "miles_off_route": 0.49,
      "gallons": 1.194, "cost_usd": 3.41},
     {"station_id": "69861", "name": "HUCKS FOOD & FUEL #379", "city": "Marion", "state": "IL",
-     "price_per_gallon_usd": 2.929, "route_mile": 649.5, "miles_off_route": 1.0,
+     "price_per_gallon_usd": 2.929, "route_mile": 649.52, "miles_off_route": 0.96,
      "gallons": 29.165, "cost_usd": 85.42}
   ],
   "summary": {"num_stops": 6, "total_gallons": 96.669, "total_cost_usd": 274.95,
@@ -144,8 +144,8 @@ fuelrouter/              the app
   services/              geocode.py, routing.py, stations.py, optimizer.py,
                          planner.py, geo.py   (framework-free, unit-tested)
   data/stations.json     truck stops with coordinates + prices (built offline)
-  tests/                 28 unit tests (optimizer, geometry, matching, API,
-                         planner overrides, input validation)
+  tests/                 29 unit tests (optimizer, geometry, matching, API,
+                         planner overrides, input validation, cache keys)
   views.py               DRF JSON API + map page
 templates/fuelrouter/    map.html (Leaflet), map_error.html
 scripts/build_stations.py  reproduces data/stations.json from the CSV
