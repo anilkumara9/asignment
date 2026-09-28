@@ -1,7 +1,9 @@
 """Planner orchestration tests with external services mocked (no network)."""
 
+import warnings
 from unittest.mock import patch
 
+from django.core.cache.backends.base import CacheKeyWarning
 from django.test import SimpleTestCase
 
 from fuelrouter.services import planner as planner_mod
@@ -54,6 +56,27 @@ class PlanTripOverrideTests(SimpleTestCase):
         self.assertEqual(plan["vehicle"]["max_range_miles"], 400)
         # tank_gallons derives from the overridden range/mpg, not defaults
         self.assertEqual(plan["vehicle"]["tank_gallons"], 20.0)
+        self.assertEqual(plan["summary"]["num_stops"], 1)
+
+    def test_cache_keys_with_spaces_raise_no_warning(self):
+        # Queries like "New York,NY" must not produce cache keys with
+        # characters that break memcached-style backends (CacheKeyWarning).
+        station = _station("S1", 10.0, 3.0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", CacheKeyWarning)
+            with patch.object(planner_mod, "geocode",
+                              side_effect=[(40.7, -74.0, "New York"),
+                                           (25.8, -80.2, "Miami")]), \
+                 patch.object(planner_mod, "get_route",
+                              return_value={"distance_miles": 900.0,
+                                            "duration_minutes": 800.0,
+                                            "coordinates": [(-74.0, 40.7),
+                                                            (-80.2, 25.8)]}), \
+                 patch.object(planner_mod, "stations_near_route",
+                              return_value=[station]), \
+                 patch.object(planner_mod, "plan_fuel_stops",
+                              return_value=[(station, 90.0)]):
+                plan = plan_trip("New York,NY", "Miami, FL")
         self.assertEqual(plan["summary"]["num_stops"], 1)
 
     def test_custom_mpg_changes_gallons_math(self):

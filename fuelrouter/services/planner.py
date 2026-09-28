@@ -6,7 +6,7 @@ External API usage per unique (start, finish) pair:
 Everything else (station matching, price optimization) is local.
 """
 
-from urllib.parse import urlencode
+from urllib.parse import quote_plus, urlencode
 
 from django.conf import settings
 from django.core.cache import cache
@@ -28,8 +28,8 @@ def plan_trip(start_query, finish_query, mpg=None, max_range_miles=None):
     max_range = settings.MAX_RANGE_MILES if max_range_miles is None else max_range_miles
 
     cache_key = (
-        f"plan:v1:{start_query.strip().lower()}|{finish_query.strip().lower()}|"
-        f"{mpg}|{max_range}"
+        f"plan:v2:{quote_plus(start_query.strip().lower())}|"
+        f"{quote_plus(finish_query.strip().lower())}|{mpg}|{max_range}"
     )
     cached = cache.get(cache_key)
     if cached is not None:

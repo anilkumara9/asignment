@@ -5,6 +5,8 @@ network again.
 """
 
 import requests
+from urllib.parse import quote_plus
+
 from django.conf import settings
 from django.core.cache import cache
 
@@ -22,7 +24,7 @@ def geocode(query):
     if not query:
         raise GeocodeError("Empty location query.")
 
-    cache_key = f"geocode:v1:{query.lower()}"
+    cache_key = f"geocode:v2:{quote_plus(query.lower())}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
